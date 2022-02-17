@@ -1,0 +1,185 @@
+---
+title: "Linear Regression Model Matrices"
+author: "Math 271"
+date: "Spring 2022"
+output: 
+  html_document:
+    css: lab.css
+    toc: true
+    toc_float: true
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+
+
+# Linear Model Formulae
+
+In the last problem set we reviewed using `lm()` to fit a simple regression model. If we wish to use a variable `x` to predict the value of a response variable `y`, we use the command
+
+```{r, eval=F}
+lm(y~x, data)
+```
+
+to obtain the coefficients of the best fitting prediction equation of the form \[ \hat y = a + bx.\]
+
+Near the end, we briefly covered a few a few other models that can be fitted with `lm`.
+
+If we want to create a prediction equation where the intercept is zero, \[\hat y = bx \] then we use the command 
+
+```{r, eval=F}
+lm(y~x-1, data)
+```
+
+And to fit a parabola, which makes predictions with an equation \[\hat y = a + bx + cx^2\] then we should use the command 
+
+```{r, eval=F}
+lm(y~poly(x,2), data)
+```
+
+This problem set focuses on the mechanics of using the _formula_ to tell R what kind of equation you want it to fit. In brief, the syntax is a way to tell R what kinds of terms you would like it to add or remove from the prediction equation.
+
+
+## Intercept-only
+
+The simplest model one can specify is a model with _no predictors at all_. In other words, we would like a _single number_ that is the best prediction for the responses across the entire data set. The prediction equation in this case is very simple \[\hat y = a\]
+
+The built-in 'sleep' data set contains a classic example data from an experiment on the efficacy of soporific (sleeping) drugs. The `extra` column has 20 measurements of the extra hours of sleep when a subject had when given the drug vs when not. The following use of `lm` fits the _intercept-only_ model.
+
+```{r}
+(slp.1 <- lm(extra ~ 1, sleep))
+```
+For this model, the coefficient tells us that the best sinlge number to use as a prediction for a data point is \[\hat y = `r format(coef(slp.1),digits=3)`\]
+
+It should not shock you too much to learn that the coefficient that `lm` found is nothing more than the mean of the values.
+```{r}
+mean(sleep$extra)
+```
+To really understand the logic of the formula, we must introduce the idea of the _design matrix_ or _model matrix_ associated with a prediction equation. We can view the matrix from a fitted model using `model.matrix` on the fitted model object.
+
+```{r}
+model.matrix(slp.1)
+```
+
+The intercept-only model, with formula `y ~ 1`, has a model matrix which is simply a column of one values. (The numbers 1 through 20 are row numbers.)
+
+To produce the predictions, one multiplies the `(Intercept)` coefficient with the value from the `(Intercept)` column in the model matrix.
+
+```{r}
+model.matrix(slp.1) * coef(slp.1)
+```
+As desired, the same number is generated as a prediction for every row in the data.
+
+
+## Simple Linear Regression
+
+To explore the simple linear regression formula, the `openintro::bac` data set has 16 rows of data on the `bac` values blown by students after drinking a number of 12 oz `beers`. We first fit the model \[\widehat{\text{bac}} = a + b\cdot\text{beers}\]
+
+```{r}
+(bac.beers <- lm(bac ~ beers, openintro::bac))
+model.matrix(bac.beers)
+```
+The model matrix for the simple linear regression model, has _two_ columns. To obtain the model prediction for a row of data, we take the coefficient values from the model, multiply them by the number in the corresponding column of the model matrix and then add the products together. \[ \hat y = a \cdot 1 + b\cdot\text{beers}\]
+
+If we want to do this operation on every row of the data, it is equivalent to an operation called _matrix multiplication_. We can carry out matrix multiplication in R using the `%*%` operator. 
+
+```{r}
+model.matrix(bac.beers) %*% coef(bac.beers)
+```
+
+The resulting numbers are identical to the values produces by `predict(bac.beers)`, which you should verify for yourself.
+
+## Regression through the origin
+
+The next step in understanding formulas is to look at the regression through the origin model \[\hat y = b\cdot x\]
+
+```{r}
+(bac.0 <- lm(bac~beers-1, openintro::bac))
+model.matrix(bac.0)
+```
+
+This time, there is only a single coefficient, and model matrix has a single column. As before, the predictions are obtained by multiplying the coefficient with the value in the column.
+
+```{r}
+model.matrix(bac.0) %*% coef(bac.0)
+```
+
+Verify for yourself that these values match those from `predict(bac.0)`.
+
+We now begin to see a vague pattern 
+
+- `y ~ 1` produced a column of ones,
+- `y ~ x` produced a column of ones then a column of `x` values,
+- `y ~ x - 1` removed the column of ones, leaving only the `x` values.
+
+Including `x` in the formula inserts a column of the `x` values. The term `1` has something to do with the column of ones, and we can remove the column by subtracting it from the formula.
+
+1. Examine the model matrix and coefficients produced by a formula `y ~ x + 1`. What columns are included? Explain the relationship to the other formula so far. Do the same for a formula `y ~ x + 0`. 
+
+2. Make a prediction about what the a formula like `y ~ x - 1 + 1` will do, and then check your prediction. What happens?
+
+## A categorical predictor
+
+In the `sleep` data, the `group` column is a `factor` (check it out) that records which of two types of sleeping drug were administered. When using a factor as a predictor, we find a different looking model matrix. 
+
+```{r}
+(slp.gp <- lm(extra~group, sleep))
+model.matrix(slp.gp)
+```
+
+If we cross-reference the model matrix with the original data, we will discover that the `group2` column is an _indicator_ or _dummy_ variable for the second `group` of data. An indicator variable is a simple 0/1 numerical variable that indicates if some condition occurs or not. In this case, it is indicating membership in group 2.
+
+We use the same matrix multiplication as we did before to produce some predictions. Keep in mind that this operation goes row-by row through the model matrix, multiplying each column by the corresponding coefficient, and then summing the resulting products.
+
+```{r}
+model.matrix(slp.gp) %*% coef(slp.gp)
+
+sleep %>% group_by(group) %>% summarize(extra=mean(extra))
+```
+It turns out that the predictions for each observation is simply the mean of that group of data. For the observations in group 1, the prediction is \[ 1 \cdot `r coef(slp.gp)[1]` + 0 \cdot `r coef(slp.gp)[2]` =  `r coef(slp.gp)[1]` \] while for rows in group 2 the prediction is \[ 1 \cdot `r coef(slp.gp)[1]` + 1 \cdot `r coef(slp.gp)[2]` = `r sum(coef(slp.gp))`\]
+
+In this model, the `(Intercept)` coefficient is the mean of group 1, while the `group2` coefficient is the difference between the group means.
+
+
+3. Try out the model formula `extra ~ group - 1`. Investigate the model coefficients and the model matrix. Explain what you find. How do the coefficients correspond to the group means with this formula? Compare the predictions of this model with the predictions from the model `extra~group`.
+
+## Multiple Categories
+
+```{r}
+gapminder2007 <- gapminder::gapminder %>% filter(year == 2007)
+(gap.life <- lm(lifeExp ~ continent, data = gapminder2007))
+```
+
+```{r, attr.output='style="max-height: 40vh"', comment="", R.options=list(width=120)}
+model.matrix(gap.life)
+```
+
+
+## Code Folding
+
+For html output formats, the Rmd option `code_folding: hide` (or `show`) can help improve the visual appearance and readability of a report document, while still making code available to anyone interested in details. This option is set in the YAML header of the Rmd file. I encourage you to add this option to your solutions and reports from now on. The documentation page also shows how to set code folding on individual code chunks. Use these settings wisely to maximize the effectiveness of your communications.
+
+- https://bookdown.org/yihui/rmarkdown-cookbook/fold-show.html
+
+## Data frame printing
+
+Another useful output option for html is  `df_print`, which has a couple of nice options for automatically formatting printed data frame objects.
+
+https://bookdown.org/yihui/rmarkdown/html-document.html#data-frame-printing
+
+## Chunk Options
+
+There are also many options can also be set that influence the way a code chunk is processed, executed, and the results handled. These options can be set as global defaults, or operate on individual chunks. The default `setup` chunk created by RStudio on new Rmd documents is an example of setting a global default (`echo=TRUE`). It also has individual chunk options set, (`setup, include=FALSE`) giving the chunk the name `setup` and instructing knitr to discard the output instead of including it in the output document.
+
+Here are a few important chunk options:
+
+- `error=TRUE`Don't stop knitting on an error: https://bookdown.org/yihui/rmarkdown-cookbook/opts-error.html
+- Including or discarding code, output, messages, warnings, or plots: https://bookdown.org/yihui/rmarkdown-cookbook/hide-one.html
+- `include=FALSE` Running code but hide everything in the output: https://bookdown.org/yihui/rmarkdown-cookbook/hide-all.html
+- `comment=""` Remove the comment hashes in text output: https://bookdown.org/yihui/rmarkdown-cookbook/opts-comment.html
+- Chunk styling: https://bookdown.org/yihui/rmarkdown-cookbook/chunk-styling.html#chunk-styling
+- Some tricks for handling long text output: https://bookdown.org/yihui/rmarkdown-cookbook/hook-scroll.html
