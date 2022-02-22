@@ -209,6 +209,10 @@ lm(lifeExp~continent, gapminder2007) %>% coef
 
 ## Two predictor variables
 
+A _linear model_ is a model where the prediction equation has the form
+\[\hat y = b_1x_1 + \cdots + b_nx_n = \sum_{i=1}^n b_ix_i = \vec b \cdot \vec x\]
+There are $n$ coefficients $b_1,\ldots, b_n$ corresponding to model variables $x_1,\ldots,x_n$. Each of the model variables can be either a column of data directly, as in simple linear regression, or something computed from an observed variable, as in the categorical/dummy variable combinations above, or even just a constant, as in the intersept column.
+
 First we begin with a formula that adds two predictor variables on the right side.
 
 ```{r}
@@ -253,7 +257,7 @@ There are also many options can also be set that influence the way a code chunk 
 
 Here are a few important chunk options:
 
-- `error=TRUE`Don't stop knitting on an error: https://bookdown.org/yihui/rmarkdown-cookbook/opts-error.html
+- `error=TRUE` Don't stop knitting on an error: https://bookdown.org/yihui/rmarkdown-cookbook/opts-error.html
 - Including or discarding code, output, messages, warnings, or plots: https://bookdown.org/yihui/rmarkdown-cookbook/hide-one.html
 - `include=FALSE` Running code but hide everything in the output: https://bookdown.org/yihui/rmarkdown-cookbook/hide-all.html
 - `comment=""` Remove the comment hashes in text output: https://bookdown.org/yihui/rmarkdown-cookbook/opts-comment.html
