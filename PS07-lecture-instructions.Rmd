@@ -147,6 +147,12 @@ In this model, the `(Intercept)` coefficient is the mean of group 1, while the `
 
 3. Try out the model formula `extra ~ group - 1`. Investigate the model coefficients and the model matrix. Explain what you find. How do the coefficients correspond to the group means with this formula? Compare the predictions of this model with the predictions from the model `extra~group`.
 
+
+
+4. The first group is the _default_ or _reference_ group because it is the first _level_ of the factor `group`. Without using the computer, predict what the two coefficient values will be if group 2 is set as the reference group, and there is an indicator column for `group1` instead.
+
+5. Use the `forcats::fct_relevel` function to mutate the `group` factor and set the second group as the reference group. Print out the coefficients and compare them to your predictions from the last question.
+
 ## Multiple Categories
 
 ```{r}
@@ -157,7 +163,77 @@ gapminder2007 <- gapminder::gapminder %>% filter(year == 2007)
 ```{r, attr.output='style="max-height: 40vh"', comment="", R.options=list(width=120)}
 model.matrix(gap.life)
 ```
+```{r, eval=F}
+model.matrix(gap.life) %*% coef(gap.life)
+```
 
+6. Determine which continent in the `gapminder2007` data has the largest population. Set that continent as the reference level of the factor and re-fit the `lifeExp ~ continent` model. Report the coefficients and explain what each one means. (Try using in-line code chunks when appropriate to report numbers in text.)
+
+## Contrasts 
+
+This topic is fairly advanced, and is here mostly to sharpen your understanding of the model matrices for `lm`.
+
+The default way that R treats categorical factors is known as _treatment contrasts_. With an intercept term in the model, one category is the _reference_ and each other category is compared to the reference. This makes sense if one category is special, either because it is some sort of baseline or control category, or because it has a larger sample size. As we've seen the treatment contrasts produce dummy variable columns in the model matrix, each indicating membership in one of the non-reference categories.
+
+
+```{r}
+contrasts(gapminder2007$continent)
+```
+
+There are other contrast modes available, which act in slightly different ways. We can set a variable to use a different contrast method as shown below. 
+
+```{r}
+contrasts(gapminder2007$continent) <- "contr.sum"
+contrasts(gapminder2007$continent)
+```
+The `contrast` function shows how the dummy variables will be constructed for each of continents. The four columns indicate that there will be four dummy variables created, and each row shows the values those dummy variables will carry for the given continent. 
+
+The _sum_ contrasts produce an interesting interpretation for the coefficients. Under this dummy variable scheme, the `(Intercept)` term is now the _mean_ of the _group means_. If each group has the same number of observations in the data set, then this will be equivalent to the overall grand mean. (But if the groups are unequally sized, the mean of the group means will not be the same as the grand mean.) The other coefficients in the model are the difference between the mean of one group and the intercept mean. So, `continent1` (Africa) has a group mean 16.69 below the intercept mean, while `continent2` (Americas) is 2.10 above the intercept mean. 
+
+The last category, Oceania in this case, does not get its own coefficient, but the matrix above suggests how to obtain this group's difference: By adding the other four coefficients together and multiplying by `-1`
+
+```{r}
+lm(lifeExp~continent, gapminder2007)
+gapminder2007 %>% group_by(continent) %>% summarize(lifeExp=mean(lifeExp)) %>% mutate(mean(lifeExp))
+```
+
+Reset contrasts back to default by setting them to `NULL`.
+
+```{r}
+contrasts(gapminder2007$continent) <- NULL ## reset to default contrasts
+lm(lifeExp~continent, gapminder2007) %>% coef
+```
+
+7. Set the `contr.sum` contrasts for the `group` variable in the `sleep` data. Refit the `extra~group` model, and report the coefficients, explaining the interpretation of each one. Verify that the number of observations in each group is the same, and that the intercept term is equal the grand mean of the `extra` column.
+
+
+## Two predictor variables
+
+First we begin with a formula that adds two predictor variables on the right side.
+
+```{r}
+(eval.btyage <- lm(score~ bty_avg + age, openintro::evals))
+eval.btyage %>% model.matrix %>% as.tibble %>% slice_sample(n=10)
+```
+
+Keeping in mind that we form predictions by computing the dot product of a model matrix row with the coefficient vector, we see that the prediction equation must be \[\widehat{\text{score}} = 4.05\cdot 1 + 0.06\cdot\text{bty_avg}-0.003\cdot\text{age}.\]
+
+In this model, each predictor variable acts completely independently on the response. This called a model with _main effects_ only.
+
+The converse of a main effects model, is a model with _interaction_ terms. These terms will allow for predictions to have additional terms that come into play when both predictors are large at the same time (or one is large and one is  small). To get interaction terms, there are two equivalent formula syntax:
+
+- `var1 + var2 + var1:var2` This syntax explicitly adds three columns to the model matrix.
+- `var1 * var2` This syntax says add both main effect columns as well as an intersect column.
+
+```{r}
+(eval.btyage.int <- lm(score~ bty_avg * age, openintro::evals))
+eval.btyage.int %>% model.matrix %>% as.tibble %>% slice_sample(n=10)
+```
+The new `bty_avg:age` column is obtained as the product of the two main effect columns. The prediction equation now has an additional term, \[ \widehat{\text{score}} = 4.05\cdot 1 + 0.06\cdot\text{bty_avg}-0.003\cdot\text{age} + 0.0053 \cdot\text{bty_avg}\cdot\text{age}.\]
+
+8. Fit a model with one categorical predictor and one continuous predictor: `score~age+gender`. Investigate the model matrix and explain what each column contains. Describe the resulting prediction equation, and what role each coefficient plays in forming the prediction.
+
+9. (Advanced) Repeat the previous exercise, but with a model containing an interaction `score~age*gender`.
 
 ## Code Folding
 
