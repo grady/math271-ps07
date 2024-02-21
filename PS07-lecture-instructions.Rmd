@@ -82,6 +82,12 @@ To explore the simple linear regression formula, the `openintro::bac` data set h
 
 ```{r}
 (bac.beers <- lm(bac ~ beers, openintro::bac))
+```
+
+The fitted model is found to be 
+\[\widehat{\text{bac}} = `r signif(coef(bac.beers)[1],2)`+`r signif(coef(bac.beers)[2],2)`\cdot\text{beers} \]
+
+```{r}
 model.matrix(bac.beers)
 ```
 The model matrix for the simple linear regression model, has _two_ columns. To obtain the model prediction for a row of data, we take the coefficient values from the model, multiply them by the number in the corresponding column of the model matrix and then add the products together. \[ \hat y = a \cdot 1 + b\cdot\text{beers}\]
@@ -94,12 +100,29 @@ model.matrix(bac.beers) %*% coef(bac.beers)
 
 The resulting numbers are identical to the values produces by `predict(bac.beers)`, which you should verify for yourself.
 
+Matrix multiplication is a central object of study in a field of math known as _linear algebra_. 
+If you are interested in doing data analysis on a regular basis, I would highly encourage you to seek out and take a basic course in linear algebra for scientists or engineers.
+There is a great deal of insight to be gained into exactly what is going on within these models if one takes the time to become acquainted with the mathematics under the hood.
+
 ## Regression through the origin
 
 The next step in understanding formulas is to look at the regression through the origin model \[\hat y = b\cdot x\]
 
+This is a particularly meaningful model for the `bac` data. 
+In our simple linear model from the previous section, the bac prediction for a student who did not drink is actually a negative number. 
+\[\widehat{\text{bac}} = `r signif(coef(bac.beers)[1],2)`+`r signif(coef(bac.beers)[2],2)`\cdot 0 = `r signif(coef(bac.beers)[1],2)`\]
+Negative values of bac are meaningless and impossible, so this prediction is clearly problematic.
+
+The regression through the origin model forces the prediction to be zero when the x-value is zero.
+
 ```{r}
 (bac.0 <- lm(bac~beers-1, openintro::bac))
+```
+
+Now our model is \[\widehat{\text{bac}} =`r signif(coef(bac.0)[1],2)`\cdot \widehat{\text{beers}}\]
+
+Now look at the model matrix.
+```{r}
 model.matrix(bac.0)
 ```
 
